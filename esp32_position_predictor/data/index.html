@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESP32 Position Predictor</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <h1>Sistema IoT de Prediccion de Posicion</h1>
+        <p>ESP32 en modo AP + interpolacion lineal y cuadratica en tiempo real.</p>
+      </header>
+
+      <section class="panel">
+        <h2>Estado de red</h2>
+        <p id="network-status">Consultando estado del ESP32...</p>
+      </section>
+
+      <section class="panel controls">
+        <h2>Fuente de video</h2>
+        <div class="control-grid">
+          <label for="stream-url">URL de stream (HTTP/RTSP bridge/MJPEG)</label>
+          <input
+            id="stream-url"
+            type="text"
+            placeholder="http://192.168.x.x:8080/video"
+            autocomplete="off"
+          />
+
+          <label for="horizon-ms">Horizonte de prediccion (ms)</label>
+          <input id="horizon-ms" type="number" min="20" max="5000" step="10" value="200" />
+        </div>
+        <div class="button-row">
+          <button id="load-stream" type="button">Cargar stream</button>
+          <button id="use-camera" type="button">Usar camara local</button>
+          <button id="clear-data" type="button">Limpiar datos</button>
+        </div>
+      </section>
+
+      <section class="panel workspace">
+        <div class="stage" id="stage">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay"></canvas>
+          <p id="stage-message" class="stage-message">
+            Carga un video y haz clic en el objetivo para registrar (t, x, y).
+          </p>
+        </div>
+        <div class="metrics">
+          <h2>Prediccion activa</h2>
+          <p id="prediction-status">Aun no hay suficientes puntos.</p>
+          <dl>
+            <dt>Lineal</dt>
+            <dd id="pred-linear">-</dd>
+            <dt>Cuadratica</dt>
+            <dd id="pred-quadratic">-</dd>
+            <dt>Tiempo objetivo</dt>
+            <dd id="pred-target-time">-</dd>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel tables">
+        <div>
+          <h2>Puntos recientes (buffer circular N=3)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>t (ms)</th>
+                <th>x (px)</th>
+                <th>y (px)</th>
+              </tr>
+            </thead>
+            <tbody id="points-body">
+              <tr>
+                <td colspan="4">Sin datos.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h2>Errores absolutos</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Modelo</th>
+                <th>|Ex|</th>
+                <th>|Ey|</th>
+                <th>Euclidiano</th>
+              </tr>
+            </thead>
+            <tbody id="errors-body">
+              <tr>
+                <td colspan="4">Sin evaluaciones.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="signature">Hecho por Frank Panicide</footer>
+    </main>
+  </body>
+</html>
