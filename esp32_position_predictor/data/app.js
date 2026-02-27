@@ -1,4 +1,5 @@
 const MAX_POINTS = 3;
+const STREAM_URL_STORAGE_KEY = "esp32_predictor_saved_stream_url";
 
 const state = {
   points: [],
@@ -9,6 +10,7 @@ const state = {
   pendingPrediction: null,
   validations: [],
   localStream: null,
+  sourceMode: "none",
 };
 
 const ui = {
@@ -50,6 +52,21 @@ function setMessage(text) {
   ui.stageMessage.textContent = text;
 }
 
+function sendTelemetry(eventName, details = {}) {
+  const payload = JSON.stringify({
+    event: eventName,
+    ts: Date.now(),
+    details,
+  });
+
+  fetch("/api/telemetry", {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {});
+}
+
 function resizeCanvasToStage() {
   const rect = ui.stage.getBoundingClientRect();
   ui.overlay.width = rect.width;
@@ -57,7 +74,7 @@ function resizeCanvasToStage() {
   drawOverlay();
 }
 
-function clearSessionState() {
+function clearSessionState(emitTelemetry = true) {
   state.points = [];
   state.startTimeMs = null;
   state.validations = [];
@@ -72,6 +89,9 @@ function clearSessionState() {
   renderPredictionPanel();
   drawOverlay();
   setMessage("Datos limpios. Haz clic para registrar nuevos puntos.");
+  if (emitTelemetry) {
+    sendTelemetry("session_clear");
+  }
 }
 
 function pushPoint(point) {
@@ -285,6 +305,12 @@ function schedulePrediction(nowMs) {
     awaitingValidation: false,
   };
 
+  sendTelemetry("prediction_ready", {
+    horizonMs: state.horizonMs,
+    linear: Boolean(linear),
+    quadratic: Boolean(quadratic),
+  });
+
   renderPredictionPanel();
   drawOverlay();
 
@@ -295,6 +321,7 @@ function schedulePrediction(nowMs) {
     state.pendingPrediction.awaitingValidation = true;
     renderPredictionPanel();
     setMessage("Haz clic en la posicion real del objetivo para calcular el error.");
+    sendTelemetry("prediction_waiting_real");
   }, state.horizonMs);
 }
 
@@ -332,6 +359,13 @@ function evaluatePendingPrediction(realPoint) {
     state.timerId = null;
   }
 
+  sendTelemetry("prediction_evaluated", {
+    hasLinear: Boolean(result.linear),
+    hasQuadratic: Boolean(result.quadratic),
+    linearEuclidean: result.linear ? Number(result.linear.euclidean.toFixed(2)) : null,
+    quadraticEuclidean: result.quadratic ? Number(result.quadratic.euclidean.toFixed(2)) : null,
+  });
+
   renderErrorsTable();
   renderPredictionPanel();
 }
@@ -355,24 +389,90 @@ function handleStageClick(event) {
   schedulePrediction(nowMs);
   drawOverlay();
   setMessage(`Ultimo punto: x=${formatNumber(sample.x)}, y=${formatNumber(sample.y)}`);
+  sendTelemetry("point_sample", {
+    x: Number(sample.x.toFixed(1)),
+    y: Number(sample.y.toFixed(1)),
+    pointsInBuffer: state.points.length,
+  });
 }
 
-function setVideoSource(url) {
+function waitForVideoReady(timeoutMs = 3500) {
+  return new Promise((resolve) => {
+    let done = false;
+    let timerId = null;
+
+    const cleanup = () => {
+      ui.video.removeEventListener("loadeddata", onReady);
+      ui.video.removeEventListener("canplay", onReady);
+      ui.video.removeEventListener("error", onError);
+      if (timerId) {
+        clearTimeout(timerId);
+      }
+    };
+
+    const finish = (ok) => {
+      if (done) {
+        return;
+      }
+      done = true;
+      cleanup();
+      resolve(ok);
+    };
+
+    const onReady = () => finish(true);
+    const onError = () => finish(false);
+
+    ui.video.addEventListener("loadeddata", onReady, { once: true });
+    ui.video.addEventListener("canplay", onReady, { once: true });
+    ui.video.addEventListener("error", onError, { once: true });
+
+    timerId = setTimeout(() => {
+      finish(ui.video.readyState >= 2);
+    }, timeoutMs);
+  });
+}
+
+async function setVideoSource(url, options = {}) {
+  const { auto = false, requireFrame = true } = options;
+
   if (state.localStream) {
     state.localStream.getTracks().forEach((track) => track.stop());
     state.localStream = null;
   }
   ui.video.srcObject = null;
   ui.video.src = url;
-  ui.video.play().catch(() => {
-    setMessage("No se pudo reproducir el stream. Verifica la URL.");
-  });
+
+  try {
+    await ui.video.play();
+  } catch (_) {}
+
+  const isReady = requireFrame ? await waitForVideoReady() : true;
+  if (!isReady) {
+    sendTelemetry("camera_stream_fail", { auto, url });
+    if (!auto) {
+      setMessage("No se pudo reproducir el stream. Verifica la URL.");
+    }
+    return false;
+  }
+
+  state.sourceMode = "stream-url";
+  localStorage.setItem(STREAM_URL_STORAGE_KEY, url);
+  sendTelemetry("camera_stream_ok", { auto, url });
+  return true;
 }
 
-async function useLocalCamera() {
+async function useLocalCamera(options = {}) {
+  const { automatic = false, silent = false } = options;
+
   if (!navigator.mediaDevices?.getUserMedia) {
-    setMessage("Este navegador no soporta camara local.");
-    return;
+    sendTelemetry("camera_local_unavailable", {
+      automatic,
+      reason: "mediaDevices_not_available",
+    });
+    if (!silent) {
+      setMessage("Este navegador no soporta camara local en este contexto.");
+    }
+    return false;
   }
 
   try {
@@ -389,12 +489,60 @@ async function useLocalCamera() {
     ui.video.src = "";
     ui.video.srcObject = stream;
     await ui.video.play();
-    setMessage("Camara local activa. Haz clic para registrar puntos.");
+    state.sourceMode = "local-camera";
+
+    sendTelemetry("camera_local_ok", {
+      automatic,
+      width: ui.video.videoWidth || null,
+      height: ui.video.videoHeight || null,
+    });
+
+    if (!silent) {
+      setMessage("Camara local activa. Haz clic para registrar puntos.");
+    }
+    return true;
   } catch (error) {
-    setMessage(
-      "No se pudo abrir camara local (en HTTP puede bloquearse). Usa URL de stream externo."
-    );
+    sendTelemetry("camera_local_fail", {
+      automatic,
+      reason: String(error?.name || error?.message || "unknown"),
+    });
+    if (!silent) {
+      setMessage(
+        "No se pudo abrir camara local automaticamente. En HTTP puede bloquearse; usa URL de stream."
+      );
+    }
+    return false;
   }
+}
+
+async function autoConnectVideoSource() {
+  const savedUrl = localStorage.getItem(STREAM_URL_STORAGE_KEY) || "";
+  if (savedUrl) {
+    ui.streamUrl.value = savedUrl;
+  }
+
+  const localCameraConnected = await useLocalCamera({
+    automatic: true,
+    silent: true,
+  });
+
+  if (localCameraConnected) {
+    setMessage("Camara de la PC conectada automaticamente.");
+    return;
+  }
+
+  if (savedUrl) {
+    const streamConnected = await setVideoSource(savedUrl, {
+      auto: true,
+      requireFrame: true,
+    });
+    if (streamConnected) {
+      setMessage("Stream guardado conectado automaticamente.");
+      return;
+    }
+  }
+
+  setMessage("Autoconexion no disponible. Usa camara local o ingresa URL.");
 }
 
 async function fetchNetworkStatus() {
@@ -404,7 +552,7 @@ async function fetchNetworkStatus() {
       throw new Error(`HTTP ${response.status}`);
     }
     const status = await response.json();
-    ui.networkStatus.innerHTML = `<span class="ok">Online</span> | SSID: <b>${status.ssid}</b> | IP: <b>${status.ip}</b> | Clientes: <b>${status.stations}</b>`;
+    ui.networkStatus.innerHTML = `<span class="ok">Online</span> | SSID: <b>${status.ssid}</b> | IP: <b>${status.ip}</b> | Clientes: <b>${status.stations}</b> | Req: <b>${status.req_total}</b> | Tel: <b>${status.telemetry_hits}</b> | Heap: <b>${status.heap}</b>`;
   } catch (error) {
     ui.networkStatus.innerHTML =
       '<span class="warn">Sin conexion con API del ESP32.</span> Verifica estar en la red AP.';
@@ -412,17 +560,21 @@ async function fetchNetworkStatus() {
 }
 
 function bindEvents() {
-  ui.loadStreamBtn.addEventListener("click", () => {
+  ui.loadStreamBtn.addEventListener("click", async () => {
     const url = ui.streamUrl.value.trim();
     if (!url) {
       setMessage("Ingresa una URL de stream.");
       return;
     }
-    setVideoSource(url);
-    setMessage("Stream cargado. Haz clic en el objetivo para medir.");
+    const ok = await setVideoSource(url, { auto: false, requireFrame: true });
+    if (ok) {
+      setMessage("Stream cargado. Haz clic en el objetivo para medir.");
+    }
   });
 
-  ui.useCameraBtn.addEventListener("click", useLocalCamera);
+  ui.useCameraBtn.addEventListener("click", async () => {
+    await useLocalCamera({ automatic: false, silent: false });
+  });
 
   ui.clearDataBtn.addEventListener("click", clearSessionState);
 
@@ -431,6 +583,7 @@ function bindEvents() {
     if (Number.isFinite(value) && value >= 20 && value <= 5000) {
       state.horizonMs = value;
       setMessage(`Horizonte de prediccion configurado en ${state.horizonMs} ms.`);
+      sendTelemetry("horizon_change", { horizonMs: state.horizonMs });
       return;
     }
     ui.horizonMs.value = String(state.horizonMs);
@@ -440,12 +593,16 @@ function bindEvents() {
   window.addEventListener("resize", resizeCanvasToStage);
 }
 
-function init() {
+async function init() {
   bindEvents();
   resizeCanvasToStage();
-  clearSessionState();
+  clearSessionState(false);
   fetchNetworkStatus();
   setInterval(fetchNetworkStatus, 5000);
+  sendTelemetry("web_loaded", {
+    userAgent: navigator.userAgent.slice(0, 80),
+  });
+  await autoConnectVideoSource();
 }
 
 init();

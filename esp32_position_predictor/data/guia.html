@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guia Completa - ESP32 Position Predictor</title>
+    <style>
+      :root {
+        --bg: #f2f6f0;
+        --card: #ffffff;
+        --ink: #1f2d2f;
+        --soft: #52666a;
+        --line: #d4e0d8;
+        --acc: #3a7d44;
+        --acc2: #2d5d34;
+        --warn: #b45f06;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 90% 0%, #dfeedd 0%, transparent 40%),
+          radial-gradient(circle at 10% 100%, #d5e4f1 0%, transparent 35%),
+          var(--bg);
+      }
+
+      .wrap {
+        width: min(1080px, 96vw);
+        margin: 1.2rem auto 2rem;
+        display: grid;
+        gap: 1rem;
+      }
+
+      .hero {
+        border-radius: 1rem;
+        padding: 1.2rem 1.4rem;
+        color: #f9fff8;
+        background: linear-gradient(125deg, var(--acc2), var(--acc));
+        box-shadow: 0 10px 24px rgba(32, 61, 34, 0.2);
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(1.25rem, 3.4vw, 2rem);
+      }
+
+      .hero p {
+        margin: 0.45rem 0 0;
+      }
+
+      .row {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 0.9rem;
+        padding: 1rem;
+        box-shadow: 0 8px 22px rgba(22, 49, 31, 0.06);
+      }
+
+      .card h2 {
+        margin: 0 0 0.6rem;
+        font-size: 1.08rem;
+      }
+
+      .card p {
+        margin: 0.35rem 0;
+      }
+
+      .badge {
+        display: inline-block;
+        background: #e6f4e8;
+        color: #245e2c;
+        border: 1px solid #cfe7d3;
+        border-radius: 999px;
+        padding: 0.2rem 0.62rem;
+        font-size: 0.83rem;
+        font-weight: 700;
+      }
+
+      ol,
+      ul {
+        margin: 0.55rem 0 0 1.2rem;
+      }
+
+      li {
+        margin: 0.35rem 0;
+      }
+
+      .cmd {
+        margin: 0.6rem 0 0;
+        padding: 0.75rem 0.85rem;
+        border-radius: 0.72rem;
+        background: #111b1c;
+        color: #e8f9f4;
+        border: 1px solid #263e40;
+        font-family: "Consolas", "Courier New", monospace;
+        font-size: 0.9rem;
+        overflow-x: auto;
+        white-space: pre;
+      }
+
+      .grid-2 {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+
+      .footer {
+        text-align: center;
+        font-weight: 700;
+        color: var(--acc2);
+        letter-spacing: 0.04em;
+      }
+
+      .top-link {
+        color: #f4fff2;
+        display: inline-block;
+        margin-top: 0.7rem;
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 0.6rem;
+        padding: 0.42rem 0.75rem;
+      }
+
+      @media (min-width: 920px) {
+        .grid-2 {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="hero">
+        <h1>Guia Completa de Uso y Comandos</h1>
+        <p>ESP32 Position Predictor: instalacion, carga, uso, prueba y solucion de errores.</p>
+        <span class="badge">Version rapida y practica</span><br />
+        <a class="top-link" href="/">Volver al sistema principal</a>
+      </header>
+
+      <section class="row grid-2">
+        <article class="card">
+          <h2>1. Comandos para activar todo</h2>
+          <p>Inicio en un clic (recomendado):</p>
+          <pre class="cmd">INICIAR_TODO.bat COM6</pre>
+          <p>Ejecuta desde la carpeta del proyecto:</p>
+          <pre class="cmd">cd c:\Users\jffra\OneDrive\Escritorio\calculoproyec\esp32_position_predictor
+pio run -t upload --upload-port COM6
+pio run -t uploadfs --upload-port COM6
+pio device monitor --port COM6 --baud 115200</pre>
+          <p>Si no sabes el puerto:</p>
+          <pre class="cmd">pio device list</pre>
+        </article>
+
+        <article class="card">
+          <h2>2. Datos de red del ESP32</h2>
+          <ul>
+            <li>SSID: <b>ESP32-Predictor</b></li>
+            <li>Password: <b>frank2026</b></li>
+            <li>IP local: <b>192.168.4.1</b></li>
+            <li>Web principal: <b>http://192.168.4.1</b></li>
+            <li>Guia web: <b>http://192.168.4.1/guia.html</b></li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="row grid-2">
+        <article class="card">
+          <h2>3. Flujo de uso en campo</h2>
+          <ol>
+            <li>Conecta tu PC o movil al Wi-Fi del ESP32.</li>
+            <li>Abre <b>http://192.168.4.1</b>.</li>
+            <li>Carga URL de stream o usa camara local.</li>
+            <li>Haz clic sobre el objetivo para registrar puntos.</li>
+            <li>Revisa prediccion lineal y cuadratica.</li>
+            <li>Cuando pase el horizonte, haz clic en la posicion real.</li>
+            <li>Observa la tabla de errores absolutos.</li>
+          </ol>
+        </article>
+
+        <article class="card">
+          <h2>4. Que calcula el sistema</h2>
+          <ul>
+            <li>Buffer circular de muestras: <b>N = 3</b>.</li>
+            <li>Interpolacion lineal: necesita 2 puntos.</li>
+            <li>Interpolacion cuadratica de Lagrange: necesita 3 puntos.</li>
+            <li>Error absoluto:
+              <pre class="cmd">|Ex| = |x_real - x_pred|
+|Ey| = |y_real - y_pred|
+E = sqrt(Ex^2 + Ey^2)</pre>
+            </li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="row grid-2">
+        <article class="card">
+          <h2>5. Diagnostico rapido</h2>
+          <p><span class="warn">No carga la pagina:</span> confirma conexion a SSID `ESP32-Predictor`.</p>
+          <p><span class="warn">No sube firmware:</span> prueba otro cable USB o baja baudios de subida.</p>
+          <p><span class="warn">COM ocupado:</span> cierra Arduino IDE/monitor serie que use el puerto.</p>
+          <p><span class="warn">No aparece stream:</span> revisa URL y que el stream sea HTTP/MJPEG visible.</p>
+        </article>
+
+        <article class="card">
+          <h2>6. Comandos utiles de mantenimiento</h2>
+          <pre class="cmd">pio run
+pio run -t clean
+pio run -t upload --upload-port COM6
+pio run -t uploadfs --upload-port COM6
+pio device monitor --port COM6 --baud 115200</pre>
+          <p>Recomendado: subir firmware y luego LittleFS cada vez que cambies web.</p>
+        </article>
+      </section>
+
+      <footer class="footer">Hecho por Frank Panicide</footer>
+    </main>
+  </body>
+</html>

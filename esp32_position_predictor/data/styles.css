@@ -51,6 +51,28 @@ body {
   color: #def9f9;
 }
 
+.guide-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.52rem 0.82rem;
+  border-radius: 0.62rem;
+  text-decoration: none;
+  color: #f8ffff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.14);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: transform 110ms ease, background 110ms ease;
+}
+
+.guide-link:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.guide-link:active {
+  transform: translateY(1px);
+}
+
 .panel {
   background: var(--bg-card);
   border: 1px solid var(--line);

@@ -1,0 +1,40 @@
+GUIA RAPIDA DE COMANDOS - ESP32 POSITION PREDICTOR
+Hecho por Frank Panicide
+
+1) Entrar a carpeta del proyecto
+cd c:\Users\jffra\OneDrive\Escritorio\calculoproyec\esp32_position_predictor
+
+2) Ver puerto del ESP32
+pio device list
+
+Atajo automatico (recomendado):
+INICIAR_TODO.bat COM6
+
+3) Subir firmware (cambia COM6 por tu puerto)
+pio run -t upload --upload-port COM6
+
+4) Subir web (LittleFS)
+pio run -t uploadfs --upload-port COM6
+
+5) Ver monitor serie
+pio device monitor --port COM6 --baud 115200
+
+6) Web del sistema
+Conectarte al Wi-Fi:
+- SSID: ESP32-Predictor
+- Password: frank2026
+
+Abrir:
+- http://192.168.4.1
+- Guia visual: http://192.168.4.1/guia.html
+
+7) Flujo de uso
+- Cargar stream o usar camara local.
+- Hacer clic para registrar puntos.
+- Esperar prediccion.
+- Hacer clic en posicion real para error.
+
+8) Si algo falla
+- COM ocupado: cierra otro monitor serie.
+- No conecta: cambia cable USB o puerto.
+- No abre web: verifica que estes conectado al SSID ESP32-Predictor.
