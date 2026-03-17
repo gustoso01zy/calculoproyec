@@ -10,6 +10,9 @@ pio device list
 Atajo automatico (recomendado):
 INICIAR_TODO.bat COM6
 
+Iniciar solo stream de camara local (sin navegador):
+INICIAR_CAMARA_PC.bat
+
 3) Subir firmware (cambia COM6 por tu puerto)
 pio run -t upload --upload-port COM6
 
@@ -29,12 +32,15 @@ Abrir:
 - Guia visual: http://192.168.4.1/guia.html
 
 7) Flujo de uso
-- Cargar stream o usar camara local.
-- Hacer clic para registrar puntos.
+- Iniciar stream local de PC (INICIAR_CAMARA_PC.bat).
+- Cargar stream (auto: http://127.0.0.1:8081/stream.mjpg).
+- Pulsar "Iniciar seguimiento" y hacer clic sobre el objeto.
+- El sistema registra puntos automaticos y llena tabla/resultados.
 - Esperar prediccion.
-- Hacer clic en posicion real para error.
+- Si usas modo manual, hacer clic en posicion real para error.
 
 8) Si algo falla
 - COM ocupado: cierra otro monitor serie.
 - No conecta: cambia cable USB o puerto.
 - No abre web: verifica que estes conectado al SSID ESP32-Predictor.
+- No aparece camara: verifica que INICIAR_CAMARA_PC.bat este corriendo.

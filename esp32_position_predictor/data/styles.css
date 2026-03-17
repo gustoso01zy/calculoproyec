@@ -142,6 +142,7 @@ button:active {
 }
 
 .stage video,
+.stage img,
 .stage canvas {
   position: absolute;
   inset: 0;
@@ -179,6 +180,13 @@ button:active {
 
 .metrics dd {
   margin: 0;
+  font-weight: 700;
+}
+
+#tracking-status {
+  margin: 0.35rem 0 0.45rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
   font-weight: 700;
 }
 

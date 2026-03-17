@@ -2,6 +2,7 @@
 #include <LittleFS.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <ESP32Servo.h>
 
 namespace {
 constexpr char kApSsid[] = "ESP32-Predictor";
@@ -12,6 +13,11 @@ const IPAddress kSubnet(255, 255, 255, 0);
 constexpr uint32_t kHeartbeatIntervalMs = 3000;
 
 WebServer server(80);
+
+constexpr int kServoXPin = 14;  // Recomendado: GPIO14, evita pines de boot/strapping
+constexpr int kServoYPin = 27;  // Recomendado: GPIO27
+Servo servoX;
+Servo servoY;
 
 struct TelemetryStats {
   uint32_t totalRequests = 0;
@@ -148,6 +154,80 @@ void handleTelemetry() {
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
+void handleServo() {
+  markRequest();
+  
+  int x = -1;
+  int y = -1;
+  
+  // First try to parse as JSON (application/json)
+  if (server.hasArg("plain") && server.arg("plain").length() > 0) {
+    String jsonBody = server.arg("plain");
+    
+    // Simple JSON parsing for {"x":value,"y":value}
+    int xIdx = jsonBody.indexOf("\"x\"");
+    int yIdx = jsonBody.indexOf("\"y\"");
+    
+    if (xIdx >= 0) {
+      int colonIdx = jsonBody.indexOf(":", xIdx);
+      if (colonIdx >= 0) {
+        String xStr = jsonBody.substring(colonIdx + 1);
+        int commaIdx = xStr.indexOf(",");
+        if (commaIdx >= 0) xStr = xStr.substring(0, commaIdx);
+        int braceIdx = xStr.indexOf("}");
+        if (braceIdx >= 0) xStr = xStr.substring(0, braceIdx);
+        xStr.trim();
+        x = xStr.toInt();
+      }
+    }
+    
+    if (yIdx >= 0) {
+      int colonIdx = jsonBody.indexOf(":", yIdx);
+      if (colonIdx >= 0) {
+        String yStr = jsonBody.substring(colonIdx + 1);
+        int commaIdx = yStr.indexOf(",");
+        if (commaIdx >= 0) yStr = yStr.substring(0, commaIdx);
+        int braceIdx = yStr.indexOf("}");
+        if (braceIdx >= 0) yStr = yStr.substring(0, braceIdx);
+        yStr.trim();
+        y = yStr.toInt();
+      }
+    }
+    
+    Serial.print("JSON parsed: x=");
+    Serial.print(x);
+    Serial.print(" y=");
+    Serial.println(y);
+  }
+  
+  // Fallback to form arguments (application/x-www-form-urlencoded)
+  if (server.hasArg("x") && x < 0) {
+    x = server.arg("x").toInt();
+  }
+  if (server.hasArg("y") && y < 0) {
+    y = server.arg("y").toInt();
+  }
+  
+  // Apply servo positions
+  if (x >= 0 && x <= 180) {
+    servoX.write(x);
+    Serial.print("ServoX write: ");
+    Serial.println(x);
+  }
+  if (y >= 0 && y <= 180) {
+    servoY.write(y);
+    Serial.print("ServoY write: ");
+    Serial.println(y);
+  }
+  
+  Serial.print("Servo command: X=");
+  Serial.print(x);
+  Serial.print(" Y=");
+  Serial.println(y);
+  
+  server.send(200, "application/json", "{\"ok\":true}");
+}
+
 void handleNotFound() {
   if (!server.uri().startsWith("/api/") && serveFromLittleFs(server.uri())) {
     return;
@@ -166,6 +246,43 @@ void setupWebServer() {
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/ping", HTTP_GET, handlePing);
   server.on("/api/telemetry", HTTP_POST, handleTelemetry);
+  server.on("/api/servo", HTTP_POST, handleServo);
+  
+  // Also allow GET for quick testing from a browser (e.g. /api/servo?x=90&y=90)
+  server.on("/api/servo", HTTP_GET, []() {
+    markRequest();
+    int x = 90, y = 90;
+    if (server.hasArg("x")) x = server.arg("x").toInt();
+    if (server.hasArg("y")) y = server.arg("y").toInt();
+
+    if (x >= 0 && x <= 180) servoX.write(x);
+    if (y >= 0 && y <= 180) servoY.write(y);
+
+    Serial.print("GET Servo: X=");
+    Serial.print(x);
+    Serial.print(" Y=");
+    Serial.println(y);
+
+    server.send(200, "application/json", "{\"ok\":true,\"x\":" + String(x) + ",\"y\":" + String(y) + "}");
+  });
+  
+  // Test endpoint - access like /api/test?x=90&y=90
+  server.on("/api/test", HTTP_GET, []() {
+    int x = 90, y = 90;
+    if (server.hasArg("x")) x = server.arg("x").toInt();
+    if (server.hasArg("y")) y = server.arg("y").toInt();
+    
+    servoX.write(x);
+    servoY.write(y);
+    
+    Serial.print("TEST: ServoX=");
+    Serial.print(x);
+    Serial.print(" ServoY=");
+    Serial.println(y);
+    
+    server.send(200, "application/json", "{\"ok\":true,\"x\":" + String(x) + ",\"y\":" + String(y) + "}");
+  });
+  
   server.on("/styles.css", HTTP_GET, []() { serveFromLittleFs("/styles.css"); });
   server.on("/app.js", HTTP_GET, []() { serveFromLittleFs("/app.js"); });
   server.onNotFound(handleNotFound);
@@ -229,6 +346,32 @@ void setup() {
 
   setupAccessPoint();
   setupWebServer();
+
+  // Configure servos with explicit pulse width range
+  // Standard servo: 1000-2000us, some servos need 500-2500us
+  // Se usan pines que no son strapping (boot) para evitar problemas
+  servoX.attach(kServoXPin, 500, 2500);  // GPIO14
+  servoY.attach(kServoYPin, 500, 2500);  // GPIO27
+
+  // Initialize servos to center position
+  servoX.write(90);
+  servoY.write(90);
+  delay(1000);  // Give servos time to reach position
+
+  Serial.println("Servos initialized at 90 degrees");
+
+  // Test sweep
+  Serial.println("Testing servo sweep...");
+  servoX.write(0);
+  servoY.write(0);
+  delay(500);
+  servoX.write(180);
+  servoY.write(180);
+  delay(500);
+  servoX.write(90);
+  servoY.write(90);
+  delay(500);
+  Serial.println("Sweep test complete");
 }
 
 void loop() {

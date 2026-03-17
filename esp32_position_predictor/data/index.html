@@ -27,7 +27,7 @@
           <input
             id="stream-url"
             type="text"
-            placeholder="http://192.168.x.x:8080/video"
+            placeholder="http://127.0.0.1:8081/stream.mjpg"
             autocomplete="off"
           />
 
@@ -36,22 +36,26 @@
         </div>
         <div class="button-row">
           <button id="load-stream" type="button">Cargar stream</button>
-          <button id="use-camera" type="button">Usar camara local</button>
+          <button id="use-camera" type="button">Usar stream local PC</button>
+          <button id="toggle-tracking" type="button">Iniciar seguimiento</button>
           <button id="clear-data" type="button">Limpiar datos</button>
+          <button id="test-servo" type="button">Probar servo</button>
         </div>
       </section>
 
       <section class="panel workspace">
         <div class="stage" id="stage">
-          <video id="video" autoplay muted playsinline></video>
+          <video id="video" autoplay muted playsinline crossorigin="anonymous"></video>
+          <img id="stream-image" alt="Vista de stream local" hidden crossorigin="anonymous" />
           <canvas id="overlay"></canvas>
           <p id="stage-message" class="stage-message">
-            Carga un video y haz clic en el objetivo para registrar (t, x, y).
+            Carga un stream. Activa seguimiento y haz clic en el objeto para calibrar.
           </p>
         </div>
         <div class="metrics">
           <h2>Prediccion activa</h2>
           <p id="prediction-status">Aun no hay suficientes puntos.</p>
+          <p id="tracking-status">Seguimiento: desactivado.</p>
           <dl>
             <dt>Lineal</dt>
             <dd id="pred-linear">-</dd>
@@ -65,7 +69,7 @@
 
       <section class="panel tables">
         <div>
-          <h2>Puntos recientes (buffer circular N=3)</h2>
+          <h2>Muestras registradas (ultimas 30)</h2>
           <table>
             <thead>
               <tr>
@@ -73,11 +77,12 @@
                 <th>t (ms)</th>
                 <th>x (px)</th>
                 <th>y (px)</th>
+                <th>Fuente</th>
               </tr>
             </thead>
             <tbody id="points-body">
               <tr>
-                <td colspan="4">Sin datos.</td>
+                <td colspan="5">Sin datos.</td>
               </tr>
             </tbody>
           </table>

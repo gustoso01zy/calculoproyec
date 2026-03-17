@@ -184,7 +184,7 @@ pio device monitor --port COM6 --baud 115200</pre>
           <ol>
             <li>Conecta tu PC o movil al Wi-Fi del ESP32.</li>
             <li>Abre <b>http://192.168.4.1</b>.</li>
-            <li>Carga URL de stream o usa camara local.</li>
+            <li>Inicia stream local de PC y cargalo en la web.</li>
             <li>Haz clic sobre el objetivo para registrar puntos.</li>
             <li>Revisa prediccion lineal y cuadratica.</li>
             <li>Cuando pase el horizonte, haz clic en la posicion real.</li>
@@ -222,7 +222,8 @@ E = sqrt(Ex^2 + Ey^2)</pre>
 pio run -t clean
 pio run -t upload --upload-port COM6
 pio run -t uploadfs --upload-port COM6
-pio device monitor --port COM6 --baud 115200</pre>
+pio device monitor --port COM6 --baud 115200
+INICIAR_CAMARA_PC.bat</pre>
           <p>Recomendado: subir firmware y luego LittleFS cada vez que cambies web.</p>
         </article>
       </section>

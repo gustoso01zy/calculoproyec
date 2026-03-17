@@ -28,6 +28,7 @@ La captura visual se hace con una fuente externa (camara IP, PC, movil o webcam 
 - ESP32 DevKit (o compatible `esp32dev`)
 - PlatformIO CLI o extension en VS Code
 - Cable USB
+- Python 3 + `opencv-python` (para stream local de camara en PC)
 
 ## 4. Carga al ESP32
 
@@ -53,10 +54,11 @@ pio device monitor
    - SSID: `ESP32-Predictor`
    - Password: `frank2026`
 2. Abre `http://192.168.4.1`
-3. Carga una URL de stream o activa camara local.
-4. Haz clic en el objetivo para registrar puntos `(t, x, y)`.
-5. El sistema calcula prediccion lineal y cuadratica a `t + delta`.
-6. Al cumplirse el horizonte, haz clic en la posicion real para medir error absoluto.
+3. Inicia stream local de la PC (`INICIAR_CAMARA_PC.bat`) o carga URL de stream.
+4. (Opcional recomendado) Pulsa `Iniciar seguimiento` y haz clic en el objeto para calibrar.
+5. El sistema registra muestras `(t, x, y)` automaticamente y las muestra en tabla.
+6. El sistema calcula prediccion lineal y cuadratica a `t + delta`.
+7. En modo manual, al cumplirse el horizonte, haz clic en la posicion real para medir error.
 
 ## 6. Telemetria en vivo por terminal
 
@@ -71,9 +73,11 @@ Veras:
 
 ## 7. Autoconexion de camara de PC
 
-- Al abrir la web, el sistema intenta activar automaticamente la camara local de la PC.
-- Si el navegador bloquea camara en HTTP, usa el boton `Usar camara local` o una URL de stream.
-- Si cargaste una URL antes, queda guardada y se reconecta automaticamente.
+- La camara de la PC se publica con script independiente: `pc_camera_stream.py`.
+- URL local por defecto: `http://127.0.0.1:8081/stream.mjpg`.
+- Al abrir la web, el sistema intenta primero ese stream local (sin pedir permiso de camara al navegador).
+- Tambien puedes usar el boton `Usar stream local PC` para reconectar manualmente.
+- Si guardaste otra URL antes, se usa como fallback cuando no haya stream local.
 
 ## 8. Notas tecnicas
 
